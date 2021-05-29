@@ -6,7 +6,6 @@ import {Tile as TileLayer, Vector as VectorLayer} from 'ol/layer';
 import {OSM, Vector as VectorSource} from 'ol/source';
 import Feature from "ol/Feature";
 import Point from "ol/geom/Point";
-import XYZ from 'ol/source/XYZ';
 import './App.css';
 
 import socketIOClient from "socket.io-client";
@@ -24,18 +23,18 @@ class App extends Component {
       source: new OSM(),
     });
     this.state = {
-      data: {}
+      data: []
     };
   }
 
   componentDidMount() {
-
+    console.log("app")
     const socket = socketIOClient(ENDPOINT);
     socket.on("FromAPI", data => {
       this.setState({
         data
       })
-      this.updatePointLocation();
+      this.updateFeaturesLocation();
     });
 
     this.map = new Map({
@@ -43,31 +42,34 @@ class App extends Component {
       layers: [this.rasterLayer, this.vectorLayer],
       view: new View({
         projection: 'EPSG:4326',
-        center: [0, 0],
-        zoom: 2
+        center: [-71.064548, 42.352376],
+        zoom: 15
       })
     });
   }
 
-  updatePointLocation(){
+  updateFeaturesLocation(){
     let {data} = this.state;
-    var iconFeature = new Feature({
-      geometry: new Point([data.longitude, data.latitude]),
-      name: "car123"
-    });
     this.map.removeLayer(this.vectorLayer);
 
     this.vectorSource = new VectorSource();
     this.vectorLayer = new VectorLayer({
       source: this.vectorSource
     });
-    this.vectorSource.addFeature(iconFeature);
+
+    data.map((f) => {
+      var iconFeature = new Feature({
+        geometry: new Point([f.coords.longitude, f.coords.latitude]),
+        name: f.featureId
+      });
+      this.vectorSource.addFeature(iconFeature);
+    });
     this.map.addLayer(this.vectorLayer);
-    this.map.setView( new View({
-      projection: 'EPSG:4326',
-      center: [data.longitude , data.latitude],
-      zoom: 18
-    }));
+    // this.map.setView( new View({
+    //   projection: 'EPSG:4326',
+    //   center: [data[0].coords.longitude , data[0].coords.latitude],
+    //   zoom: 15
+    // }));
   }
 
   render() {
@@ -75,7 +77,14 @@ class App extends Component {
     return (
         <div>
           <div id='mapCanvas' style={{ width: "100%", height: "600px" }} />
-          It's <time dateTime={data}>lat: {data.latitude} , lon: {data.longitude}</time>
+          <div>
+            {data.map((f) => {
+              return <div>
+                <a>Feature Id: {f.featureId}</a> &nbsp;&nbsp;
+                <a>Coordinates: {f.coords.latitude} {f.coords.longitude}</a>
+              </div>
+            })}
+          </div>
         </div>
     );
   }
